@@ -13,8 +13,6 @@ import SwiftData
 final class TimeTracker: ObservableObject {
     @Published private(set) var isTracking: Bool = false
     @Published private(set) var currentStart: Date?
-
-    private(set) weak var statusBarController: StatusBarController?
     private let modelContext: ModelContext
 
     init(modelContext: ModelContext) {
@@ -25,16 +23,12 @@ final class TimeTracker: ObservableObject {
         guard !isTracking else { return }
         isTracking = true
         currentStart = Date()
-        let controller = StatusBarController(tracker: self)
-        self.statusBarController = controller
     }
 
     func stop() {
         guard isTracking else { return }
         isTracking = false
         currentStart = nil
-        statusBarController?.remove()
-        statusBarController = nil
     }
 
     func capture(note: String) {

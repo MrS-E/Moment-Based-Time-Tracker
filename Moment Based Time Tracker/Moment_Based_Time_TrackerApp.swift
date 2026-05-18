@@ -31,5 +31,23 @@ struct Moment_Based_Time_TrackerApp: App {
                 .environmentObject(tracker)
         }
         .modelContainer(sharedModelContainer)
+
+        // Menu bar popover for capturing a moment while tracking
+        // Shown only while tracking to mimic spawning/removing the status item
+        if tracker.isTracking {
+            MenuBarExtra {
+                CapturePopoverView(
+                    elapsedProvider: { tracker.currentElapsed().mmssString },
+                    onSave: { text in
+                        tracker.capture(note: text)
+                    },
+                    onCancel: { /* SwiftUI will auto-close the window-style popover */ }
+                )
+                .frame(minWidth: 280)
+            } label: {
+                Text("⏱")
+            }
+            .menuBarExtraStyle(.window)
+        }
     }
 }
