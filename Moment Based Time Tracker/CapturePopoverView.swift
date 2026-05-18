@@ -29,14 +29,25 @@ struct CapturePopoverView: View {
             TextField("Add a description…", text: $note)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit {
-                    onSave(note)
+                    let text = note
+                    note = ""
+                    onSave(text)
                     dismiss()
                 }
 
             HStack {
                 Spacer()
-                Button("Cancel") { onCancel(); dismiss() }
-                Button("Save") { onSave(note); dismiss() }
+                Button("Cancel") {
+                    note = ""
+                    onCancel()
+                    dismiss()
+                }
+                Button("Save") {
+                    let text = note
+                    note = ""
+                    onSave(text)
+                    dismiss()
+                }
                     .keyboardShortcut(.defaultAction)
             }
         }
