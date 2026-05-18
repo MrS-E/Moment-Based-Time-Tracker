@@ -10,45 +10,77 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @EnvironmentObject private var tracker: TimeTracker
+    @Query(sort: \Item.timestamp, order: .reverse)
+    private var items: [Item]
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-            .toolbar {
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            Divider()
+            list
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .automatic) {
+                if tracker.isTracking {
+                    Button(role: .destructive) { tracker.stop() } label: {
+                        Label("Stop Tracking", systemImage: "stop.fill")
+                    }
+                } else {
+                    Button { tracker.start() } label: {
+                        Label("Start Tracking", systemImage: "play.fill")
+                    }
+                }
+            }
+        }
+        .padding()
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+    private var header: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Moment Based Time Tracker")
+                    .font(.title2).bold()
+                Text(tracker.isTracking ? "Tracking… tap the menu bar ⏱ to capture a moment." : "Not tracking. Press Start to spawn the menu bar ⏱.")
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if tracker.isTracking {
+                Text(tracker.currentElapsed().mmssString)
+                    .monospacedDigit().font(.title3).padding(6).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+            }
         }
+        .padding(.bottom, 8)
+    }
+
+    private var list: some View {
+        List {
+            if items.isEmpty {
+                ContentUnavailableView("No moments yet", systemImage: "text.badge.plus", description: Text("Start tracking and use the ⏱ menu bar button to capture time with a description."))
+            }
+            ForEach(items) { item in
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.note.isEmpty ? "(No description)" : item.note)
+                            .font(.headline)
+                        Text(item.timestamp, format: Date.FormatStyle(date: .abbreviated, time: .shortened))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(item.durationSeconds.mmssString)
+                        .monospacedDigit()
+                        .bold()
+                }
+            }
+            .onDelete(perform: deleteItems)
+        }
+        .listStyle(.inset)
     }
 
     private func deleteItems(offsets: IndexSet) {
         withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
+            for index in offsets { modelContext.delete(items[index]) }
         }
     }
 }
@@ -56,4 +88,5 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .modelContainer(for: Item.self, inMemory: true)
+        .environmentObject(TimeTracker(modelContext: try! ModelContainer(for: Schema([Item.self])) .mainContext))
 }
