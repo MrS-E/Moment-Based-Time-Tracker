@@ -72,10 +72,11 @@ final class TimeTracker: ObservableObject {
 
 extension TimeInterval {
     var mmssString: String {
-        // Use floor to avoid premature rounding up (e.g., 0.6s -> 1s)
-        let total = Int(self)
-        let minutes = total / 60
-        let seconds = total % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+        // Format as hh:mm using floor semantics (ignore seconds entirely)
+        let totalSeconds = Int(self)
+        let totalMinutes = totalSeconds / 60
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        return String(format: "%02d:%02d", hours, minutes)
     }
 }
