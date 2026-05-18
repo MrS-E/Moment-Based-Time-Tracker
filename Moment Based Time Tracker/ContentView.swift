@@ -49,7 +49,7 @@ struct ContentView: View {
             }
             Spacer()
             if tracker.isTracking {
-                Text(tracker.currentElapsed().mmssString)
+                Text(headerElapsedText)
                     .monospacedDigit().font(.title3).padding(6).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
                     .onReceive(headerTimer) { date in
                         // drive a state change to refresh the elapsed text every second
@@ -108,6 +108,16 @@ struct ContentView: View {
                 #endif
             }
         }
+    }
+
+    // Show seconds in the header so the value visibly updates every second while tracking.
+    // The rest of the app keeps using the hh:mm format.
+    private var headerElapsedText: String {
+        let total = Int(tracker.currentElapsed())
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
 }
 
