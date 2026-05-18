@@ -32,6 +32,8 @@ struct Moment_Based_Time_TrackerApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(tracker)
+                // Ensure the main window is visible on launch with a sensible minimum size
+                .frame(minWidth: 520, minHeight: 420)
         }
         .modelContainer(sharedModelContainer)
 
