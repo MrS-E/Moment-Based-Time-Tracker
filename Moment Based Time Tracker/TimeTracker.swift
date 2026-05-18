@@ -22,7 +22,19 @@ final class TimeTracker: ObservableObject {
     func start() {
         guard !isTracking else { return }
         isTracking = true
-        currentStart = Date()
+        let start = Date()
+        currentStart = start
+
+        // Generate an initial item on start (duration 0), so the timeline reflects the start moment
+        let entry = Item(timestamp: start, durationSeconds: 0, note: "")
+        modelContext.insert(entry)
+        do {
+            try modelContext.save()
+        } catch {
+            #if DEBUG
+            print("Failed to save start entry: \(error)")
+            #endif
+        }
     }
 
     func stop() {
@@ -60,7 +72,8 @@ final class TimeTracker: ObservableObject {
 
 extension TimeInterval {
     var mmssString: String {
-        let total = Int(self.rounded())
+        // Use floor to avoid premature rounding up (e.g., 0.6s -> 1s)
+        let total = Int(self)
         let minutes = total / 60
         let seconds = total % 60
         return String(format: "%02d:%02d", minutes, seconds)

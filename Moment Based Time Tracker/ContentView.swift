@@ -7,12 +7,15 @@
 
 import SwiftUI
 import SwiftData
+import Combine
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var tracker: TimeTracker
     @Query(sort: \Item.timestamp, order: .reverse)
     private var items: [Item]
+    @State private var now: Date = .init()
+    private let headerTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -48,6 +51,10 @@ struct ContentView: View {
             if tracker.isTracking {
                 Text(tracker.currentElapsed().mmssString)
                     .monospacedDigit().font(.title3).padding(6).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                    .onReceive(headerTimer) { date in
+                        // drive a state change to refresh the elapsed text every second
+                        now = date
+                    }
             }
         }
         .padding(.bottom, 8)

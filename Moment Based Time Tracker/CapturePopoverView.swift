@@ -6,13 +6,16 @@
 //
 
 import SwiftUI
+import Combine
 
 struct CapturePopoverView: View {
     var elapsedProvider: () -> String
     var onSave: (String) -> Void
     var onCancel: () -> Void
 
+    @Environment(\.dismiss) private var dismiss
     @State private var note: String = ""
+    @State private var now: Date = .init()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -25,17 +28,24 @@ struct CapturePopoverView: View {
 
             TextField("Add a description…", text: $note)
                 .textFieldStyle(.roundedBorder)
-                .onSubmit { onSave(note) }
+                .onSubmit {
+                    onSave(note)
+                    dismiss()
+                }
 
             HStack {
                 Spacer()
-                Button("Cancel") { onCancel() }
-                Button("Save") { onSave(note) }
+                Button("Cancel") { onCancel(); dismiss() }
+                Button("Save") { onSave(note); dismiss() }
                     .keyboardShortcut(.defaultAction)
             }
         }
         .padding(14)
         .frame(width: 280)
+        // Drive view updates every second so the elapsed text stays live
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
+            now = date
+        }
     }
 }
 
