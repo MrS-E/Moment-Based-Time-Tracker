@@ -9,9 +9,10 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class StatusBarController: NSObject {
+final class StatusBarController: NSObject, NSPopoverDelegate {
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
+    private var hostingController: NSHostingController<CapturePopoverView>?
     private unowned let tracker: TimeTracker
 
     init(tracker: TimeTracker) {
@@ -30,13 +31,12 @@ final class StatusBarController: NSObject {
             button.sendAction(on: [.leftMouseUp])
         }
         statusItem.isVisible = true
-        statusItem.behavior = .removalAllowed
-        statusItem.autosaveName = "MomentBasedTimeTrackerStatusItem"
     }
 
     private func configurePopover() {
         popover.behavior = .transient
         popover.animates = true
+        popover.delegate = self
     }
 
     @objc private func togglePopover(_ sender: AnyObject?) {
@@ -44,26 +44,50 @@ final class StatusBarController: NSObject {
         if popover.isShown {
             popover.performClose(sender)
         } else {
-            let view = CapturePopoverView(
-                elapsedProvider: { [weak tracker] in
-                    (tracker?.currentElapsed() ?? 0).mmssString
-                },
-                onSave: { [weak self] text in
-                    guard let self = self else { return }
-                    self.tracker.capture(note: text)
-                    self.popover.performClose(nil)
-                },
-                onCancel: { [weak self] in
-                    self?.popover.performClose(nil)
-                }
-            )
-            popover.contentViewController = NSHostingController(rootView: view)
+            // Build or update a single reusable hosting controller to avoid scene churn
+            let buildView: () -> CapturePopoverView = { [weak self] in
+                guard let self = self else { return CapturePopoverView(elapsedProvider: { "00:00" }, onSave: { _ in }, onCancel: {}) }
+                return CapturePopoverView(
+                    elapsedProvider: { [weak self] in
+                        guard let self = self else { return "00:00" }
+                        return self.tracker.currentElapsed().mmssString
+                    },
+                    onSave: { [weak self] text in
+                        guard let self = self else { return }
+                        self.tracker.capture(note: text)
+                        self.popover.performClose(nil)
+                    },
+                    onCancel: { [weak self] in
+                        self?.popover.performClose(nil)
+                    }
+                )
+            }
+
+            if hostingController == nil {
+                hostingController = NSHostingController(rootView: buildView())
+            } else {
+                hostingController?.rootView = buildView()
+            }
+            popover.contentViewController = hostingController
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
     }
 
     func remove() {
         if popover.isShown { popover.close() }
-        NSStatusBar.system.removeStatusItem(statusItem)
+        // Release hosted SwiftUI view to allow its scene to disconnect cleanly
+        popover.contentViewController = nil
+        hostingController = nil
+        // Defer removal to the next runloop to avoid "Unhandled disconnected scene" console spam
+        DispatchQueue.main.async { [statusItem] in
+            NSStatusBar.system.removeStatusItem(statusItem)
+        }
+    }
+
+    // MARK: - NSPopoverDelegate
+    func popoverWillClose(_ notification: Notification) {
+        // Clear content to proactively tear down the hosted SwiftUI scene
+        popover.contentViewController = nil
+        hostingController = nil
     }
 }
