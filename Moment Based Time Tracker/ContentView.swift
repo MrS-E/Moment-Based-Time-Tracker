@@ -78,6 +78,20 @@ struct ContentView: View {
                     Text(item.durationSeconds.mmssString)
                         .monospacedDigit()
                         .bold()
+                    Button(role: .destructive) {
+                        withAnimation {
+                            modelContext.delete(item)
+                            do { try modelContext.save() } catch {
+                                #if DEBUG
+                                print("Failed to delete item: \(error)")
+                                #endif
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Delete")
                 }
             }
             .onDelete(perform: deleteItems)
@@ -88,6 +102,11 @@ struct ContentView: View {
     private func deleteItems(offsets: IndexSet) {
         withAnimation {
             for index in offsets { modelContext.delete(items[index]) }
+            do { try modelContext.save() } catch {
+                #if DEBUG
+                print("Failed to save deletions: \(error)")
+                #endif
+            }
         }
     }
 }

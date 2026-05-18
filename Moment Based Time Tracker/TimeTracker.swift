@@ -24,17 +24,6 @@ final class TimeTracker: ObservableObject {
         isTracking = true
         let start = Date()
         currentStart = start
-
-        // Generate an initial item on start (duration 0), so the timeline reflects the start moment
-        let entry = Item(timestamp: start, durationSeconds: 0, note: "")
-        modelContext.insert(entry)
-        do {
-            try modelContext.save()
-        } catch {
-            #if DEBUG
-            print("Failed to save start entry: \(error)")
-            #endif
-        }
     }
 
     func stop() {
