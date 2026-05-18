@@ -25,7 +25,10 @@ struct Moment_Based_Time_TrackerApp: App {
         }
     }
 
-    var body: some Scene {
+    var body: some Scene { scenes }
+
+    // Work around potential compiler issues by building scenes in a separate @SceneBuilder
+    @SceneBuilder private var scenes: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(tracker)
@@ -33,21 +36,22 @@ struct Moment_Based_Time_TrackerApp: App {
         .modelContainer(sharedModelContainer)
 
         // Menu bar popover for capturing a moment while tracking
-        // Shown only while tracking to mimic spawning/removing the status item
-        if tracker.isTracking {
-            MenuBarExtra {
-                CapturePopoverView(
-                    elapsedProvider: { tracker.currentElapsed().mmssString },
-                    onSave: { text in
-                        tracker.capture(note: text)
-                    },
-                    onCancel: { /* SwiftUI will auto-close the window-style popover */ }
-                )
-                .frame(minWidth: 280)
-            } label: {
-                Text("⏱")
-            }
-            .menuBarExtraStyle(.window)
+        // Use isInserted binding to control presence instead of conditional scenes
+        MenuBarExtra(isInserted: .init(
+            get: { tracker.isTracking },
+            set: { _ in }
+        )) {
+            CapturePopoverView(
+                elapsedProvider: { tracker.currentElapsed().mmssString },
+                onSave: { text in
+                    tracker.capture(note: text)
+                },
+                onCancel: { /* SwiftUI will auto-close the window-style popover */ }
+            )
+            .frame(minWidth: 280)
+        } label: {
+            Text("⏱")
         }
+        .menuBarExtraStyle(.window)
     }
 }
